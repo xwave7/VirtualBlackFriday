@@ -2,6 +2,7 @@ package com.vbf.instantbuy.controller;
 
 import com.vbf.instantbuy.domain.User;
 import com.vbf.instantbuy.redis.RedisService;
+import com.vbf.instantbuy.redis.UserKey;
 import com.vbf.instantbuy.result.CodeMsg;
 import com.vbf.instantbuy.result.Result;
 import com.vbf.instantbuy.service.UserService;
@@ -59,16 +60,18 @@ public class SampleController {
 
     @RequestMapping("/redis/get")
     @ResponseBody
-    public Result<Long> redisGet() {
-        Long v1 = redisService.get("key1", Long.class);
-        return Result.success(v1);
+    public Result<User> redisGet() {
+        User user = redisService.get(UserKey.getById, "1", User.class);
+        return Result.success(user);
     }
 
     @RequestMapping("/redis/set")
     @ResponseBody
-    public Result<String> redisSet() {
-        boolean response = redisService.set("key2", "Hello Redss");
-        String str = redisService.get("key2", String.class);
-        return Result.success(str);
+    public Result<Boolean> redisSet() {
+        User user = new User();
+        user.setName("1111");
+        user.setId(1);
+        redisService.set(UserKey.getById,"1",user);
+        return Result.success(true);
     }
 }

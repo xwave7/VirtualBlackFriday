@@ -2,11 +2,9 @@ package com.vbf.instantbuy.redis;
 
 import com.alibaba.fastjson.JSON;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-import redis.clients.jedis.JedisPoolConfig;
 
 /**
  * Created by BRODY on 2019/12/4.
@@ -17,10 +15,11 @@ public class RedisService {
 
     @Autowired JedisPool jedisPool;
 
-    public <T> T get(String key, Class<T> clazz) {
+    public <T> T get(KeyPrefix prefix, String key, Class<T> clazz) {
         Jedis jedis = null;
         try {
             jedis = jedisPool.getResource();
+            key = prefix.getPrefix() + key;
             String str = jedis.get(key);
             return stringToBean(str, clazz);
         } finally {
@@ -28,13 +27,61 @@ public class RedisService {
         }
     }
 
-    public <T> boolean set(String key, T value) {
+    public <T> boolean set(KeyPrefix prefix, String key, T value) {
         Jedis jedis = null;
         try {
             jedis = jedisPool.getResource();
             String str = beanToString(value);
-            jedis.set(key, str);
+            if (str == null || str.length() == 0) {
+                return false;
+            }
+            key = prefix.getPrefix() + key;
+            int seconds = prefix.expireSeconds();
+            if (seconds <= 0) {
+                jedis.set(key, str);
+            } else {
+                jedis.setex(key, seconds, str);
+            }
             return true;
+        } finally {
+            returnToPoll(jedis);
+        }
+    }
+
+    public <T> boolean exists(KeyPrefix prefix, String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            key = prefix.getPrefix() + key;
+            return jedis.exists(key);
+        } finally {
+            returnToPoll(jedis);
+        }
+    }
+
+    /**
+     * Increase 1
+     */
+    public <T> Long incr(KeyPrefix prefix, String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            key = prefix.getPrefix() + key;
+            return jedis.incr(key);
+        } finally {
+            returnToPoll(jedis);
+        }
+    }
+
+    /**
+     * Decrease 1
+     */
+    public <T> Long decr(KeyPrefix prefix, String key) {
+        Jedis jedis = null;
+        try {
+            jedis = jedisPool.getResource();
+            key = prefix.getPrefix() + key;
+            return jedis.decr(key);
         } finally {
             returnToPoll(jedis);
         }
